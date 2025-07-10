@@ -29,6 +29,8 @@ export default function AddClasses() {
   const [placeholderImageFile, setPlaceholderImageFile] = useState(null);
   const [instructorImageFile, setInstructorImageFile] = useState(null);
   const [error, setError] = useState("");
+  const [classTypeOptions, setClassTypeOptions] = useState([]);
+  const [showCustomClassType, setShowCustomClassType] = useState(false);
 
   useEffect(() => {
     // Fetch all users with role instructor
@@ -44,6 +46,18 @@ export default function AddClasses() {
       }
     }
     fetchInstructors();
+
+    // Fetch unique class_type from Credit_Packages
+    async function fetchClassTypes() {
+      try {
+        const snap = await getDocs(collection(db, "Credit_Packages"));
+        const types = Array.from(new Set(snap.docs.map(doc => doc.data().class_type).filter(Boolean)));
+        setClassTypeOptions(types);
+      } catch (e) {
+        setClassTypeOptions([]);
+      }
+    }
+    fetchClassTypes();
   }, []);
 
   const handleChange = e => {
@@ -186,6 +200,17 @@ export default function AddClasses() {
     return isValid ? "border-gray-200" : "border-red-500";
   };
 
+  const handleClassTypeChange = e => {
+    const value = e.target.value;
+    if (value === "__other__") {
+      setShowCustomClassType(true);
+      setForm(f => ({ ...f, class_type: "" }));
+    } else {
+      setShowCustomClassType(false);
+      setForm(f => ({ ...f, class_type: value }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Navbar />
@@ -231,17 +256,32 @@ export default function AddClasses() {
                     className={`py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('title')}`}
                   />
                 </div>
-                {/* Type */}
+                {/* Class Type Dropdown + Custom */}
                 <div className="flex flex-col">
-                  <label htmlFor="class-type-input" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <input
-                    type="text"
+                  <label htmlFor="class-type-input" className="block text-sm font-medium text-gray-700 mb-1">Class Type</label>
+                  <select
                     id="class-type-input"
                     name="class_type"
-                    value={form.class_type}
-                    onChange={handleChange}
+                    value={showCustomClassType ? "__other__" : form.class_type}
+                    onChange={handleClassTypeChange}
                     className={`py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('class_type')}`}
-                  />
+                  >
+                    <option value="">Select Class Type</option>
+                    {classTypeOptions.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                    <option value="__other__">Others</option>
+                  </select>
+                  {showCustomClassType && (
+                    <input
+                      type="text"
+                      name="class_type"
+                      placeholder="Enter custom class type"
+                      value={form.class_type}
+                      onChange={handleChange}
+                      className={`mt-2 py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('class_type')}`}
+                    />
+                  )}
                 </div>
                 {/* Instructor */}
                 <div className="flex flex-col">
