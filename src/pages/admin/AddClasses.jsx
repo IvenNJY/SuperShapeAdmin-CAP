@@ -262,7 +262,7 @@ export default function AddClasses() {
                   <select
                     id="class-type-input"
                     name="class_type"
-                    value={showCustomClassType ? "__other__" : form.class_type}
+                    value={form.class_type}
                     onChange={handleClassTypeChange}
                     className={`py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('class_type')}`}
                   >
@@ -270,7 +270,6 @@ export default function AddClasses() {
                     {classTypeOptions.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
-                    <option value="__other__">Others</option>
                   </select>
                   {showCustomClassType && (
                     <input
