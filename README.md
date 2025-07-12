@@ -29,8 +29,8 @@ A live demo of the frontend is available here:
 Below is a preview of the live demo:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/dashboard.png" alt="Demo Screenshot 1" width="300" height="220" />
-  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/user-detail1.png" alt="Demo Screenshot 2" width="300" height="220" />
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/dashboard.png" alt="Demo Screenshot 1" width="400" height="220" />
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/user-detail1.png" alt="Demo Screenshot 2" width="400" height="220" />
 </p>
 
 
