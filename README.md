@@ -1,6 +1,39 @@
 # FYP Admin
 
-This project is a frontend application built with Vite, React, and Tailwind CSS. It uses Firebase for backend services.
+<!-- App Icon -->
+<p align="center">
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/public/logo.PNG" alt="App Icon" width="400" />
+</p>
+
+<!-- Tech Stack Badges -->
+<p align="center">
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" />
+</p>
+
+
+## Live Demo
+
+A live demo of the frontend is available here:
+
+[Frontend Demo](https://sswadmin.netlify.app/)
+
+**Demo Credentials:**
+- Admin: `admin@gmail.com`
+- Superadmin: `superadmin@gmail.com`
+
+## Galary
+
+Below is a preview of the live demo:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/dashboard.png" alt="Demo Screenshot 1" width="250" />
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/user-detail1.png" alt="Demo Screenshot 2" width="250" />
+  <img src="https://raw.githubusercontent.com/IvenNJY/SuperShapeAdmin-CAP/refs/heads/main/image%20samples/user-detail2.png" alt="Demo Screenshot 3" width="250" />
+</p>
+
 
 ## Prerequisites
 
