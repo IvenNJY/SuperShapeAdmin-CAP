@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, collection, getDocs, Timestamp } from "firebase
 import { db } from "../../../backend/firebaseConfig";
 import Navbar from "./Navbar";
 import ConfirmPopup from "../../components/ConfirmPopup";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function ClassDetails() {
   const params = useParams();
@@ -18,6 +19,8 @@ export default function ClassDetails() {
   const [waitingListCount, setWaitingListCount] = useState(0);
   const [instructors, setInstructors] = useState([]);
   const [showValidation, setShowValidation] = useState(false);
+  const [coverImageFile, setCoverImageFile] = useState(null);
+  const [coverImageUploading, setCoverImageUploading] = useState(false);
 
   // Helper functions
   const formatDate = (date) =>
@@ -195,6 +198,10 @@ export default function ClassDetails() {
   const handleConfirmSave = async () => {
     try {
       setLoading(true);
+      let placeholderImageUrl = form.placeholder_image;
+      if (coverImageFile && coverImageFile instanceof File) {
+        placeholderImageUrl = await uploadCoverImage(coverImageFile, uid);
+      }
       const docRef = doc(db, "class", uid);
       await updateDoc(docRef, {
         title: form.title,
@@ -204,13 +211,14 @@ export default function ClassDetails() {
         duration: form.duration,
         slot: Number(form.slot),
         description: form.description,
-        placeholder_image: form.placeholder_image,
+        placeholder_image: placeholderImageUrl,
       });
-      setClassData((prev) => ({ ...prev, ...form }));
+      setClassData((prev) => ({ ...prev, ...form, placeholder_image: placeholderImageUrl }));
       setEditMode(false);
+      setCoverImageFile(null);
     } catch (e) {
       alert("Failed to save changes.");
-      throw e; // Re-throw to handle in outer catch
+      throw e;
     } finally {
       setLoading(false);
       setShowSaveConfirm(false);
@@ -246,6 +254,22 @@ export default function ClassDetails() {
         placeholder_image: classData.placeholder_image || '',
       });
     }
+  };
+
+  const handleCoverImageChange = e => {
+    if (e.target.files && e.target.files[0]) {
+      setCoverImageFile(e.target.files[0]);
+      setForm(prev => ({ ...prev, placeholder_image: e.target.files[0] })); // Temporarily store file object
+    }
+  };
+
+  const uploadCoverImage = async (file, classId) => {
+    if (!file) return "";
+    const storage = getStorage();
+    const fileRef = storageRef(storage, `class/${classId}_cover.jpg`);
+    await uploadBytes(fileRef, file);
+    const url = await getDownloadURL(fileRef);
+    return url;
   };
 
   if (loading) {
@@ -583,17 +607,46 @@ export default function ClassDetails() {
           <div className="lg:col-span-1 flex flex-col gap-6">
             <div className="bg-white p-6 rounded-lg shadow flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md w-full">
-                {classData.placeholder_image ? (
-                  <img
-                    src={classData.placeholder_image}
-                    alt="Class Cover"
-                    className="h-32 w-auto object-cover rounded"
-                  />
+              <div className="mt-1 flex flex-col items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md w-full">
+                {editMode ? (
+                  <>
+                    {form.placeholder_image && form.placeholder_image instanceof File ? (
+                      <img
+                        src={URL.createObjectURL(form.placeholder_image)}
+                        alt="Class Cover Preview"
+                        className="h-32 w-auto object-cover rounded mb-2"
+                      />
+                    ) : form.placeholder_image ? (
+                      <img
+                        src={form.placeholder_image}
+                        alt="Class Cover"
+                        className="h-32 w-auto object-cover rounded mb-2"
+                      />
+                    ) : (
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-2" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverImageChange}
+                      className="mt-2 border border-gray-300 rounded-lg py-2 px-3 w-full text-sm bg-white cursor-pointer"
+                      style={{ textAlign: 'center' }}
+                    />
+                  </>
                 ) : (
-                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  classData.placeholder_image ? (
+                    <img
+                      src={classData.placeholder_image}
+                      alt="Class Cover"
+                      className="h-32 w-auto object-cover rounded"
+                    />
+                  ) : (
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )
                 )}
               </div>
             </div>

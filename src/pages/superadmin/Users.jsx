@@ -75,13 +75,14 @@ export default function Users() {
   const handleConfirmAddUser = async () => {
     setAddUserSaving(true);
     try {
-      const newUser = {
+      // Prepare user info without password
+      const { password, ...userInfo } = {
         ...addUserForm,
         role: "admin", // enforce admin
         created_at: new Date().toISOString(),
       };
       // Check for duplicate email
-      if (users.some(u => (u.email || "").toLowerCase() === newUser.email.toLowerCase())) {
+      if (users.some(u => (u.email || "").toLowerCase() === userInfo.email.toLowerCase())) {
         setAddUserError("A user with this email already exists.");
         setAddUserSaving(false);
         setShowConfirm(false);
@@ -93,7 +94,7 @@ export default function Users() {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newUser.email, password: newUser.password, returnSecureToken: false })
+        body: JSON.stringify({ email: userInfo.email, password: addUserForm.password, returnSecureToken: false })
       });
       const data = await res.json();
       if (!res.ok || !data.localId) {
@@ -103,13 +104,12 @@ export default function Users() {
         return;
       }
       const uid = data.localId;
-      // Add to Firestore with the same uid as doc id
+      // Add to Firestore with the same uid as doc id, but do NOT save password
       const { doc, setDoc } = await import("firebase/firestore");
-      await setDoc(doc(db, "users", uid), { ...newUser, uid });
+      await setDoc(doc(db, "users", uid), { ...userInfo, uid });
       setShowAddSidebar(false);
       setAddUserSaving(false);
       setShowConfirm(false);
-      // Refresh users (or reload page for full reset)
       window.location.reload();
     } catch (err) {
       setAddUserError("Failed to add admin: " + (err.message || err));
@@ -205,7 +205,8 @@ export default function Users() {
             <>
               {/* Overlay - fade in/out */}
               <div
-                className={`fixed inset-0 z-[100] bg-gray-300/50 transition-opacity duration-300 m-0 ${sidebarFadeOut ? 'animate-fadeOutBg' : 'animate-fadeInBg'}`}
+                className={`fixed inset-0 z-[100] bg-gray-300/50 m-0 ${sidebarFadeOut ? 'animate-fadeOutBg' : 'animate-fadeInBg'}`}
+                style={{ opacity: sidebarFadeOut ? 0 : 1, transition: 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)' }}
                 onClick={closeAddSidebar}
               />
               {/* Sidebar - fade in/out */}
@@ -324,20 +325,6 @@ export default function Users() {
                 }
                 .animate-fadeOutSidebar {
                   animation: fadeOutSidebar 0.3s cubic-bezier(0.4,0,0.2,1);
-                }
-                @keyframes fadeInBg {
-                  from { opacity: 0; }
-                  to { opacity: 0.5; }
-                }
-                @keyframes fadeOutBg {
-                  from { opacity: 0.5; }
-                  to { opacity: 0; }
-                }
-                .animate-fadeInBg {
-                  animation: fadeInBg 0.3s cubic-bezier(0.4,0,0.2,1);
-                }
-                .animate-fadeOutBg {
-                  animation: fadeOutBg 0.3s cubic-bezier(0.4,0,0.2,1);
                 }
               `}</style>
             </>

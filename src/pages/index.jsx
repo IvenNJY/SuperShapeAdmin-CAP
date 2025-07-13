@@ -75,11 +75,22 @@ function Index({ user }) {
     }
     
     // Fallback for logged-in users without a specific role or dashboard
+    const handleLogout = async () => {
+      const { signOut } = await import('firebase/auth');
+      await signOut(auth);
+      window.location.reload();
+    };
     return (
       <div className="fixed inset-0 flex items-center justify-center z-10 bg-gray-100">
         <div className="relative w-full max-w-md bg-white border border-gray-200 shadow-lg rounded-2xl p-8 mx-4 text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Welcome!</h1>
-          <p className="text-gray-600">You are logged in, but you do not have access to an admin dashboard.</p>
+          <p className="text-gray-600 mb-6">You are logged in, but you do not have access to an admin dashboard.</p>
+          <button
+            onClick={handleLogout}
+            className="py-2 px-4 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </div>
     );

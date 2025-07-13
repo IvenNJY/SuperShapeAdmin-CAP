@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router";
 import { collection, addDoc, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "../../../backend/firebaseConfig";
@@ -121,8 +122,10 @@ export default function AddClasses() {
         instructor_image,
         start_date_time,
         booked: 0,
-        credit: Number(form.credit),
         slot: Number(form.slot),
+        ...(form.type === "event"
+          ? { price: Number(form.price) }
+          : { credit: Number(form.credit) }),
       };
       await addDoc(collection(db, "class"), newClass);
       navigate(-1);
@@ -159,7 +162,7 @@ export default function AddClasses() {
     form.slot > 0 &&
     form.start_date_time !== "" &&
     form.duration.trim() !== "" &&
-    form.credit > 0 &&
+    (form.type === "event" ? (form.price > 0) : (form.credit > 0)) &&
     form.type.trim() !== "" &&
     form.description.trim() !== "";
 
@@ -192,12 +195,12 @@ export default function AddClasses() {
         isValid = form.start_date_time !== '';
         break;
       case 'credit':
-        isValid = form.credit > 0;
+        isValid = form.type === "event" ? form.price > 0 : form.credit > 0;
         break;
       default:
         break;
     }
-    return isValid ? "border-gray-200" : "border-red-500";
+    return isValid ? "border-gray-200" : "border-red-500 animate-pulse";
   };
 
   const handleClassTypeChange = e => {
@@ -369,21 +372,29 @@ export default function AddClasses() {
                     className={`py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('duration')}`}
                   />
                 </div>
-                {/* Credit */}
+                {/* Credit or Price */}
                 <div className="flex flex-col">
-                  <label htmlFor="credit-input" className="block text-sm font-medium text-gray-700 mb-1">Credit</label>
+                  <label htmlFor="credit-input" className="block text-sm font-medium text-gray-700 mb-1">
+                    {form.type === "event" ? "Price" : "Credit"}
+                  </label>
                   <input
                     type="number"
                     id="credit-input"
-                    name="credit"
-                    value={form.credit}
-                    onChange={handleChange}
+                    name={form.type === "event" ? "price" : "credit"}
+                    value={form.type === "event" ? form.price || "" : form.credit}
+                    onChange={e => {
+                      if (form.type === "event") {
+                        setForm(f => ({ ...f, price: e.target.value }));
+                      } else {
+                        setForm(f => ({ ...f, credit: e.target.value }));
+                      }
+                    }}
                     className={`py-3 px-4 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 w-full ${getInputClass('credit')}`}
                   />
                 </div>
                 {/* Type (group/event) */}
                 <div className="flex flex-col">
-                  <label htmlFor="type-input" className="block text-sm font-medium text-gray-700 mb-1">Class Type</label>
+                  <label htmlFor="type-input" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <select
                     id="type-input"
                     name="type"
@@ -430,7 +441,12 @@ export default function AddClasses() {
                   </svg>
                 )}
               </div>
-              <input type="file" accept="image/*" onChange={handlePlaceholderImageChange} className="mt-2" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePlaceholderImageChange}
+                className="mt-2 border border-gray-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+              />
             </div>
             <div className="bg-white p-6 rounded-lg shadow flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 mb-1">Instructor Image</label>
@@ -447,7 +463,12 @@ export default function AddClasses() {
                   </svg>
                 )}
               </div>
-              <input type="file" accept="image/*" onChange={handleInstructorImageChange} className="mt-2" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleInstructorImageChange}
+                className="mt-2 border border-gray-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+              />
             </div>
           </div>
         </div>

@@ -150,16 +150,21 @@ export default function Dashboard() {
         const packagesSnapshot = await getDocs(collection(db, "Credit_Packages"));
         setTotalPackages(packagesSnapshot.size);
 
-        // Fetch current user's full name
+        // Fetch current user's full name (for any admin)
         let currentUser = auth.currentUser;
         if (!currentUser && window.firebase && window.firebase.auth) {
           currentUser = window.firebase.auth().currentUser;
         }
         if (currentUser) {
+          // Find user by uid and check if role is admin
           const userDocSnap = await getDocs(query(collection(db, "users"), where("uid", "==", currentUser.uid)));
           if (!userDocSnap.empty) {
             const userData = userDocSnap.docs[0].data();
-            setUserFullName(userData.full_name || "");
+            if ((userData.role || '').toLowerCase() === 'admin') {
+              setUserFullName(userData.full_name || userData.name || currentUser.email || "");
+            } else {
+              setUserFullName("");
+            }
           }
         }
       } catch (error) {
