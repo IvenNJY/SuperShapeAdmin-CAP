@@ -7,8 +7,17 @@ import { Link, useNavigate } from 'react-router';
 export default function Classes() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [filters, setFilters] = useState({ instructor: '', type: '', date: '', status: '' });
+  // Removed unused isPanelOpen and setIsPanelOpen
+  // Set default filter to today's date
+  // Use user's local timezone
+  const [now] = useState(() => new Date());
+  const todayStr = now.toISOString().slice(0, 10);
+  const [filters, setFilters] = useState({ instructor: '', type: '', date: todayStr, status: '', title: '' });
+  // Get unique types from classes for dynamic filter
+  const uniqueTypes = useMemo(() => {
+    const typesSet = new Set(classes.map(cls => cls.class_type).filter(Boolean));
+    return Array.from(typesSet);
+  }, [classes]);
   const [sortConfig, setSortConfig] = useState({ key: 'start_date_time', direction: 'descending' });
   const navigate = useNavigate();
 
@@ -37,7 +46,8 @@ export default function Classes() {
 
   const handleFilterChange = (e) => {
     const { id, value } = e.target;
-    const filterKey = id.replace('class-', '').replace('-filter', '');
+    let filterKey = id.replace('class-', '').replace('-filter', '');
+    if (id === 'class-title-filter') filterKey = 'title';
     setFilters(prev => ({ ...prev, [filterKey]: value }));
   };
 
@@ -53,12 +63,30 @@ export default function Classes() {
     let filtered = [...classes].filter(cls => {
       const instructorMatch = filters.instructor ? cls.instructor?.toLowerCase().includes(filters.instructor.toLowerCase()) : true;
       const typeMatch = filters.type ? cls.class_type === filters.type : true;
+      const titleMatch = filters.title ? cls.title?.toLowerCase().includes(filters.title.toLowerCase()) : true;
       const dateMatch = filters.date ? cls.start_date_time.toISOString().slice(0, 10) === filters.date : true;
+      // Status logic
       const now = new Date();
       let status = 'Upcoming';
-      if (cls.start_date_time < now) status = 'Ended';
+      let endTime = new Date(cls.start_date_time.getTime() + 60 * 60 * 1000);
+      if (cls.duration) {
+        const match = String(cls.duration).match(/(\d+)\s*hour[s]?\s*(\d+)?/i);
+        let minutes = 0;
+        if (match) {
+          minutes += parseInt(match[1] || "0") * 60;
+          if (match[2]) minutes += parseInt(match[2]);
+        } else if (/\d+/.test(cls.duration)) {
+          minutes = parseInt(String(cls.duration));
+        }
+        endTime = new Date(cls.start_date_time.getTime() + minutes * 60000);
+      }
+      if (cls.start_date_time <= now && endTime > now) {
+        status = 'Active';
+      } else if (endTime <= now) {
+        status = 'Ended';
+      }
       const statusMatch = filters.status ? status === filters.status : true;
-      return instructorMatch && typeMatch && dateMatch && statusMatch;
+      return instructorMatch && typeMatch && titleMatch && dateMatch && statusMatch;
     });
 
     if (sortConfig.key) {
@@ -73,10 +101,53 @@ export default function Classes() {
     return filtered;
   }, [classes, filters, sortConfig]);
 
-  // Header card values
-  const activeClasses = useMemo(() => classes.filter(c => c.type === 'class' && c.start_date_time > new Date()).length, [classes]);
-  const activeEvents = useMemo(() => classes.filter(c => c.type === 'event' && c.start_date_time > new Date()).length, [classes]);
-  const upcomingClassesCount = useMemo(() => classes.filter(c => c.start_date_time > new Date()).length, [classes]);
+  // Header card values (reflect actual 'Active' status for today)
+  // ...existing code...
+  const getEndTime = (cls) => {
+    let endTime = new Date(cls.start_date_time.getTime() + 60 * 60 * 1000);
+    if (cls.duration) {
+      const match = String(cls.duration).match(/(\d+)\s*hour[s]?\s*(\d+)?/i);
+      let minutes = 0;
+      if (match) {
+        minutes += parseInt(match[1] || "0") * 60;
+        if (match[2]) minutes += parseInt(match[2]);
+      } else if (/\d+/.test(cls.duration)) {
+        minutes = parseInt(String(cls.duration));
+      }
+      endTime = new Date(cls.start_date_time.getTime() + minutes * 60000);
+    }
+    return endTime;
+  };
+  // Use the same status logic as the table for header cards
+  const getStatus = (cls) => {
+    let endTime = new Date(cls.start_date_time.getTime() + 60 * 60 * 1000);
+    if (cls.duration) {
+      const match = String(cls.duration).match(/(\d+)\s*hour[s]?\s*(\d+)?/i);
+      let minutes = 0;
+      if (match) {
+        minutes += parseInt(match[1] || "0") * 60;
+        if (match[2]) minutes += parseInt(match[2]);
+      } else if (/\d+/.test(cls.duration)) {
+        minutes = parseInt(String(cls.duration));
+      }
+      endTime = new Date(cls.start_date_time.getTime() + minutes * 60000);
+    }
+    const now = new Date();
+    if (cls.start_date_time <= now && endTime > now) return 'Active';
+    if (endTime <= now) return 'Ended';
+    return 'Upcoming';
+  };
+
+  // Anything not 'event' is a class
+  const activeClasses = useMemo(() => classes.filter(c =>
+    c.type !== 'event' && getStatus(c) === 'Active'
+  ).length, [classes]);
+  const activeEvents = useMemo(() => classes.filter(c =>
+    c.type === 'event' && getStatus(c) === 'Active'
+  ).length, [classes]);
+  const upcomingClassesCount = useMemo(() => classes.filter(c =>
+    c.type !== 'event' && getStatus(c) === 'Upcoming'
+  ).length, [classes]);
 
   const formatDate = (date) => date.toLocaleDateString('en-CA');
   const formatTime = (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -131,13 +202,14 @@ export default function Classes() {
         </div>
         {/* Filters and Add Class Button */}
         <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
-          <input type="text" id="class-instructor-filter" placeholder="Instructor" className="bg-white form-input border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-64 mb-2 sm:mb-0" onChange={handleFilterChange} />
+          <input type="text" id="class-title-filter" placeholder="Title" className="bg-white form-input border border-gray-300 rounded-lg px-3 py-2 flex-1 min-w-[200px] mb-2 sm:mb-0" onChange={handleFilterChange} />
+          <input type="text" id="class-instructor-filter" placeholder="Instructor" className="bg-white form-input border border-gray-300 rounded-lg px-3 py-2 flex-1 min-w-[200px] mb-2 sm:mb-0" onChange={handleFilterChange} />
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <select id="class-type-filter" className="form-select border border-gray-300 rounded-lg px-2 py-1 bg-white w-full sm:w-auto" onChange={handleFilterChange}>
               <option value="">Type</option>
-              <option value="Pilates Reformer">Pilates Reformer</option>
-              <option value="yoga">Yoga</option>
-              <option value="zumba">Zumba</option>
+              {uniqueTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
             </select>
             <input type="date" id="class-date-filter" className="form-input border border-gray-300 rounded-lg px-3 py-2 bg-white w-full sm:w-auto" onChange={handleFilterChange} />
             <select id="class-status-filter" className="form-select border border-gray-300 rounded-lg px-2 py-1 bg-white w-full sm:w-auto" onChange={handleFilterChange}>
@@ -161,7 +233,8 @@ export default function Classes() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('title')}>Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('class_type')}>Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('class_type')}>Class Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('type')}>Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('instructor')}>Instructor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sort-header cursor-pointer" onClick={() => handleSort('start_date_time')}>Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
@@ -172,21 +245,37 @@ export default function Classes() {
             </thead>
             <tbody>
               {filteredAndSortedClasses.map(cls => {
+                // Calculate end time from duration (default 1 hour if missing)
+                let endTimeObj = new Date(cls.start_date_time.getTime() + 60 * 60 * 1000);
+                if (cls.duration) {
+                  const match = String(cls.duration).match(/(\d+)\s*hour[s]?\s*(\d+)?/i);
+                  let minutes = 0;
+                  if (match) {
+                    minutes += parseInt(match[1] || "0") * 60;
+                    if (match[2]) minutes += parseInt(match[2]);
+                  } else if (/\d+/.test(cls.duration)) {
+                    minutes = parseInt(String(cls.duration));
+                  }
+                  endTimeObj = new Date(cls.start_date_time.getTime() + minutes * 60000);
+                }
+                // Status is automatically calculated
                 const now = new Date();
                 let status = 'Upcoming';
                 let statusColor = 'bg-blue-100 text-blue-700';
-                if (cls.start_date_time < now) {
+                if (cls.start_date_time <= now && endTimeObj > now) {
+                  status = 'Active';
+                  statusColor = 'bg-green-100 text-green-700';
+                } else if (endTimeObj <= now) {
                   status = 'Ended';
                   statusColor = 'bg-red-100 text-red-700';
                 }
-                // Example: parse start/end time from duration or add fields as needed
                 const startTime = formatTime(cls.start_date_time);
-                // For demo, just add 1 hour for end time
-                const endTime = formatTime(new Date(cls.start_date_time.getTime() + 60 * 60 * 1000));
+                const endTime = formatTime(endTimeObj);
                 return (
                   <tr key={cls.id}>
                     <td className="px-6 py-3">{cls.title}</td>
                     <td className="px-6 py-3">{cls.class_type}</td>
+                    <td className="px-6 py-3">{cls.type}</td>
                     <td className="px-6 py-3">{cls.instructor}</td>
                     <td className="px-6 py-3">{formatDate(cls.start_date_time)}</td>
                     <td className="px-6 py-3">{startTime}</td>

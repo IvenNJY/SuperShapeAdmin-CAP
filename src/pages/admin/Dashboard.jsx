@@ -316,7 +316,7 @@ export default function Dashboard() {
                 ) : (
                     <ul className="space-y-3">
                     {upcomingClasses.map(c => (
-                        <li key={c.id} className="border-b last:border-b-0 pb-3 flex items-center justify-between">
+                        <li key={c.id} className="border-b last:border-b-0 border-gray-200 pb-3 flex items-center justify-between">
                         <div>
                             <div className="font-semibold text-gray-800">{c.title || '-'}</div>
                             <div className="text-sm text-gray-500">{c.start_date_time ? new Date(c.start_date_time.seconds ? c.start_date_time.seconds * 1000 : c.start_date_time).toLocaleString() : '-'}</div>

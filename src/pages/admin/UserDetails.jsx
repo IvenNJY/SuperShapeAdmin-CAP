@@ -614,8 +614,8 @@ export default function UserDetails() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {bookings.length > 0 ? (
-                      bookings.slice(0, 3).map((b) => {
+                    {bookings.filter(b => (b.Status || '').toLowerCase() !== 'cancelled').length > 0 ? (
+                      bookings.filter(b => (b.Status || '').toLowerCase() !== 'cancelled').slice(0, 3).map((b) => {
                         const isEvent = b.type && b.type.toLowerCase() === "event";
                         const isProtected = isEvent && ["completed", "cancelled", "booked"].includes((b.Status || "").toLowerCase());
                         const highlight = highlightBooking && b.id === highlightBooking;
@@ -1009,8 +1009,8 @@ export default function UserDetails() {
       {/* Bookings Modal */}
       <ViewMoreModal open={showBookingsModal} onClose={() => setShowBookingsModal(false)} title="All Bookings">
         <div className="space-y-3">
-          {bookings.length > 0 ? (
-            bookings.map((b) => {
+          {bookings.filter(b => (b.Status || '').toLowerCase() !== 'cancelled').length > 0 ? (
+            bookings.filter(b => (b.Status || '').toLowerCase() !== 'cancelled').map((b) => {
               const isEvent = b.type && b.type.toLowerCase() === "event";
               const isProtected = isEvent && ["completed", "cancelled", "booked"].includes((b.Status || "").toLowerCase());
               const highlight = highlightBooking && b.id === highlightBooking;

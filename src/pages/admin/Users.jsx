@@ -285,14 +285,11 @@ export default function Users() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Users Table - Grouped by Instructor and Student */}
         <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-gray-100">
               <tr>
-                {/* <th className="px-2 sm:px-6 py-3">
-                  <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"  />
-                </th> */}
                 <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
@@ -300,18 +297,22 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-4">
-                    No users found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedUsers.map(user => (
+              {/* Group instructors first, then students, no group header rows */}
+              {(() => {
+                const instructors = paginatedUsers.filter(u => (u.role || '').toLowerCase() === 'instructor');
+                const students = paginatedUsers.filter(u => (u.role || '').toLowerCase() === 'student');
+                const allGrouped = [...instructors, ...students];
+                if (allGrouped.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={4} className="text-center py-4">
+                        No users found.
+                      </td>
+                    </tr>
+                  );
+                }
+                return allGrouped.map(user => (
                   <tr key={user.uid || user.id} className="hover:bg-gray-50">
-                    {/* <td className="px-6 py-4 whitespace-nowrap">
-                      <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"  />
-                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                       {user.full_name || user.name}
                     </td>
@@ -330,11 +331,10 @@ export default function Users() {
                       >
                         Details
                       </button>
-                      {/* <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(user.uid || user.id)}>Delete</button> */}
                     </td>
                   </tr>
-                ))
-              )}
+                ));
+              })()}
             </tbody>
           </table>
         </div>

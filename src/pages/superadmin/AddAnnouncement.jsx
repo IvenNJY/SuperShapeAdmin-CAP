@@ -169,7 +169,6 @@ export default function NewAnnouncement({ onFormClose }) {
                             >
                                 <option value="ALL">ALL</option>
                                 <option value="Users">Users</option>
-                                <option value="Class">Class</option>
                             </select>
                         </div>
                         <div className="md:col-span-2">

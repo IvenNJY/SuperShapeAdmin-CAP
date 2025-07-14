@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router";
 import Navbar from "./Navbar";
 import { db } from "../../../backend/firebaseConfig";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 
 function getStatusClass(status) {
   switch (status) {
@@ -27,45 +27,36 @@ export default function Credits() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-        const paymentCollection = collection(db, "Payment");
-        const paymentSnapshot = await getDocs(paymentCollection);
-        const paymentList = await Promise.all(
-          paymentSnapshot.docs.map(async (docSnap) => {
-            const paymentData = {
-              id: docSnap.id,
-              ...docSnap.data(),
-              createdAt: docSnap.data().createdAt?.toDate ? docSnap.data().createdAt.toDate().toLocaleString() : docSnap.data().createdAt,
-            };
-            // Fetch user full_name from users collection using userid
-            let fullName = paymentData.userName || paymentData.full_name || "-";
-            if (paymentData.userid) {
-              try {
-                const userRef = doc(db, "users", paymentData.userid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                  fullName = userSnap.data().full_name || userSnap.data().name || fullName;
-                }
-              } catch (e) {
-                // ignore user fetch error, fallback to default
+    setLoading(true);
+    const paymentCollection = collection(db, "Payment");
+    const unsubscribe = onSnapshot(paymentCollection, async (paymentSnapshot) => {
+      const paymentList = await Promise.all(
+        paymentSnapshot.docs.map(async (docSnap) => {
+          const paymentData = {
+            id: docSnap.id,
+            ...docSnap.data(),
+            createdAt: docSnap.data().createdAt?.toDate ? docSnap.data().createdAt.toDate().toLocaleString() : docSnap.data().createdAt,
+          };
+          let fullName = paymentData.userName || paymentData.full_name || "-";
+          if (paymentData.userid) {
+            try {
+              const userRef = doc(db, "users", paymentData.userid);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                fullName = userSnap.data().full_name || userSnap.data().name || fullName;
               }
+            } catch {
+              // ignore user fetch error, fallback to default
             }
-            return { ...paymentData, fullName };
-          })
-        );
-        setPayments(paymentList);
-        setError(null);
-      } catch (err) {
-        setError("Failed to fetch payments. Please try again later.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
+          }
+          return { ...paymentData, fullName };
+        })
+      );
+      setPayments(paymentList);
+      setError(null);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Filtering and Sorting

@@ -13,8 +13,12 @@ export default function Announcement() {
     const [showAddForm, setShowAddForm] = useState(false); // State to control view
     const [filterBy, setFilterBy] = useState("");
     const [filterType, setFilterType] = useState("ALL");
+    const [filterDate, setFilterDate] = useState(""); // New: filter by date (YYYY-MM-DD)
+    const [filterByWho, setFilterByWho] = useState("ALL"); // New: filter by Admin/SYSTEM
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    const fetchData = useCallback(async () => { // Moved fetchData out and wrapped in useCallback
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -29,7 +33,8 @@ export default function Announcement() {
                     subject: docData.SUBJECT || docData.subject || "",
                     announcement: docData.ANNOUNCEMENT || docData.announcement || "",
                     to: docData.TO || docData.to || "",
-                    type: docData.TYPE || docData.type || ""
+                    type: docData.TYPE || docData.type || "",
+                    timestamp: docData.timestamp ? (docData.timestamp.toDate ? docData.timestamp.toDate() : new Date(docData.timestamp.seconds ? docData.timestamp.seconds * 1000 : docData.timestamp)) : null
                 };
             });
             console.log("Fetched announcements:", data); // debug
@@ -45,6 +50,16 @@ export default function Announcement() {
     useEffect(() => {
         fetchData();
     }, [fetchData]); // Call fetchData and include it in dependencies
+
+    // Set default filters: By Who = ADMIN, Date = today
+    useEffect(() => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        setFilterByWho('ADMIN');
+        setFilterDate(`${yyyy}-${mm}-${dd}`);
+    }, []);
 
     const openDetailsModal = (announcement) => {
         console.log("Opening modal for announcement:", announcement); // debug
@@ -74,10 +89,18 @@ export default function Announcement() {
 
     // Filtered announcements
     const filteredAnnouncements = announcements.filter(a => {
-        const byMatch = filterBy === "" || (a.by && a.by.toLowerCase().includes(filterBy.toLowerCase()));
+        // Removed byMatch (text input)
         const typeMatch = filterType === "ALL" || (a.type && a.type.toLowerCase() === filterType.toLowerCase());
-        return byMatch && typeMatch;
+        const dateMatch = !filterDate || (a.timestamp && a.timestamp.toISOString().slice(0, 10) === filterDate);
+        const byWhoMatch = a.by && a.by.toUpperCase() === filterByWho;
+        return typeMatch && dateMatch && byWhoMatch;
     });
+
+    const totalPages = Math.ceil(filteredAnnouncements.length / itemsPerPage);
+    const paginatedAnnouncements = filteredAnnouncements.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     return (
         <>
@@ -104,29 +127,95 @@ export default function Announcement() {
                                     Add New Announcement
                                 </button>
                             </div>
-                            {/* Filter Controls */}
-                            <div className="flex flex-wrap gap-4 mb-4 items-end">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={filterBy}
-                                        onChange={e => setFilterBy(e.target.value)}
-                                        placeholder="By (Name)"
-                                        className="py-2 px-3 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                                        style={{ minWidth: 180 }}
-                                    />
+                            {/* Filter Controls + Pagination */}
+                            <div className="flex flex-wrap gap-4 mb-4 items-end justify-between">
+                                <div className="flex gap-4 flex-wrap">
+                                    <div>
+                                        <select
+                                            value={filterType}
+                                            onChange={e => setFilterType(e.target.value)}
+                                            className="py-2 px-3 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                                            style={{ minWidth: 120 }}
+                                        >
+                                            <option value="ALL">ALL</option>
+                                            <option value="Class">Class</option>
+                                            <option value="Users">Users</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="date"
+                                            value={filterDate}
+                                            onChange={e => setFilterDate(e.target.value)}
+                                            className="py-2 px-3 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                                            style={{ minWidth: 150 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <select
+                                            value={filterByWho}
+                                            onChange={e => setFilterByWho(e.target.value)}
+                                            className="py-2 px-3 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                                            style={{ minWidth: 120 }}
+                                        >
+                                            <option value="ADMIN">Admin</option>
+                                            <option value="SYSTEM">SYSTEM</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <select
-                                        value={filterType}
-                                        onChange={e => setFilterType(e.target.value)}
-                                        className="py-2 px-3 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                                        style={{ minWidth: 120 }}
-                                    >
-                                        <option value="ALL">ALL</option>
-                                        <option value="Class">Class</option>
-                                        <option value="Users">Users</option>
-                                    </select>
+                                <div className="flex items-center gap-x-2">
+                                    <label className="flex items-center gap-x-2 text-sm text-gray-700">
+                                        <span>Rows:</span>
+                                        <select
+                                            className="py-2 px-3 pr-6 block border bg-white border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"
+                                            value={itemsPerPage}
+                                            onChange={e => {
+                                                setItemsPerPage(Number(e.target.value));
+                                                setCurrentPage(1);
+                                            }}
+                                            style={{ minWidth: 60 }}
+                                        >
+                                            <option value={5}>5</option>
+                                            <option value={10}>10</option>
+                                            <option value={20}>20</option>
+                                            <option value={50}>50</option>
+                                        </select>
+                                    </label>
+                                    <nav className="flex items-center gap-x-1 ml-2" aria-label="Pagination">
+                                        <button
+                                            type="button"
+                                            className="min-h-9.5 min-w-9.5 py-2 px-2.5 inline-flex justify-center items-center gap-x-2 text-sm rounded-lg text-gray-800 hover:bg-gray-100 focus:outline-hidden focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
+                                            aria-label="Previous"
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <svg className="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m15 18-6-6 6-6"></path>
+                                            </svg>
+                                            <span className="sr-only">Previous</span>
+                                        </button>
+                                        <div className="flex items-center gap-x-1">
+                                            <span className="bg-white min-h-9.5 min-w-9.5 flex justify-center items-center border border-gray-200 text-gray-800 py-2 px-3 text-sm rounded-lg focus:outline-hidden focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none">
+                                                {totalPages === 0 ? 0 : currentPage}
+                                            </span>
+                                            <span className="min-h-9.5 flex justify-center items-center text-gray-500 py-2 px-1.5 text-sm">of</span>
+                                            <span className="min-h-9.5 flex justify-center items-center text-gray-500 py-2 px-1.5 text-sm">
+                                                {totalPages}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="min-h-9.5 min-w-9.5 py-2 px-2.5 inline-flex justify-center items-center gap-x-2 text-sm rounded-lg text-gray-800 hover:bg-gray-100 focus:outline-hidden focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
+                                            aria-label="Next"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages || totalPages === 0}
+                                        >
+                                            <span className="sr-only">Next</span>
+                                            <svg className="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m9 18 6-6-6-6"></path>
+                                            </svg>
+                                        </button>
+                                    </nav>
                                 </div>
                             </div>
                             {/* Announcements Table */}
@@ -150,12 +239,12 @@ export default function Announcement() {
                                             <tr>
                                                 <td colSpan={5} className="text-center py-4 text-red-500">{error}</td>
                                             </tr>
-                                        ) : filteredAnnouncements.length === 0 ? (
+                                        ) : paginatedAnnouncements.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="text-center py-4">No announcements found.</td>
                                             </tr>
                                         ) : (
-                                            filteredAnnouncements.map((announcement, idx) => (
+                                            paginatedAnnouncements.map((announcement, idx) => (
                                                 <tr key={announcement.id || idx} className="hover:bg-gray-50">
                                                     {/* Removed border-b to remove underline */}
                                                     <td className="px-6 py-3">{announcement.by}</td>
